@@ -376,7 +376,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
 
     <div class="card">
       <div class="row" style="justify-content:space-between;align-items:center;">
-        <h2 style="margin:0 0 4px 0">my RTAs (v    2.1.6)</h2>
+        <h2 style="margin:0 0 4px 0">my RTAs (v     2.1.7)</h2>
         <div class="row">
           <button id="btnStart">▶️ เริ่มวัด</button>
           <button id="btnStop" class="secondary" disabled>⏸️ หยุด</button>
@@ -430,9 +430,9 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
           <div class="toolbar">
             <div class="stack">
               <label>FFT Size
-                <input id="fftRangeSlider" type="range" min="0" max="3" step="1" value="1" aria-label="FFT size preset">
+                <input id="fftRangeSlider" type="range" min="0" max="4" step="1" value="1" aria-label="FFT size preset">
                 <select id="fftSizePreset">
-                  <option value=\"1024\">1024</option>
+                  <option value="1024">1024</option>
 <option value="2048">2048</option>
                   <option value="4096" selected>4096</option>
                   <option value="8192">8192</option>
@@ -722,7 +722,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
         this.HEATMAP_TIME_SLICES=200;
         this.HEATMAP_BINS_HD=300;
         this.HEATMAP_BINS_SD=60;
-        this.FFT_SIZES=[2048,4096,8192,16384];
+        this.FFT_SIZES=[1024,2048,4096,8192,16384];
 
         this.dom=this.getDOMElements();
         this.colors={};
@@ -910,13 +910,13 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
 
 
         this.dom.fftSizePreset.addEventListener('change',(e)=>{
-          const idx=[2048,4096,8192,16384].indexOf(parseInt(e.target.value,10));
+          const idx=[1024,2048,4096,8192,16384].indexOf(parseInt(e.target.value,10));
           this.dom.fftRangeSlider.value=idx<0?1:idx;
           this.onConfigChange();
         });
         this.dom.fftRangeSlider.addEventListener('input',(e)=>{
           const idx=parseInt(e.target.value,10);
-          const size=[2048,4096,8192,16384][idx]||4096;
+          const size=[1024,2048,4096,8192,16384][idx]||4096;
           this.dom.fftSizePreset.value=size;
           this.onConfigChange();
         });

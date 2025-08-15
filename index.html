@@ -376,7 +376,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
 
     <div class="card">
       <div class="row" style="justify-content:space-between;align-items:center;">
-        <h2 style="margin:0 0 4px 0">my RTAs (v   2.1.2)</h2>
+        <h2 style="margin:0 0 4px 0">my RTAs (v    2.1.3)</h2>
         <div class="row">
           <button id="btnStart">▶️ เริ่มวัด</button>
           <button id="btnStop" class="secondary" disabled>⏸️ หยุด</button>
@@ -633,10 +633,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
   }catch(e){}
 
   // DPR helper only (no RAF throttle)
-  window.__ecoDPR__=function(){
-    var base=(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1));
-    return window.__ECO_MODE__ ? Math.min(1.5, base) : base;
-  };
+  window.__ecoDPR__=function(){ var base=(window.devicePixelRatio||1); return window.__ECO_MODE__ ? Math.min(1.5, base) : base; };
 
   function applyEcoFFTLowering(){
     try{

@@ -594,6 +594,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
     <button id="fabHold"  class="fab" title="Hold Peak" aria-pressed="true">📌</button>
     <button id="fabClear" class="fab" title="Clear Peak & ATH">♻️</button>
     <button id="fabAwt"   class="fab" title="A-weighting" aria-pressed="false">🎧</button>
+    <button id="fabSaver" class="fab" title="Battery Saver" aria-pressed="true">🔋</button>
   </div>
 
   
@@ -1540,5 +1541,111 @@ updateColors(){
     new RTAnalyzer();
   })();
   </script>
+
+<script>
+(function(){
+  function q(id){ return document.getElementById(id); }
+  window.__ECO_MODE__ = true;
+
+  function textIsOn(el){
+    if(!el) return false;
+    var t=(el.textContent||'').trim().toUpperCase();
+    var pressed=el.getAttribute && el.getAttribute('aria-pressed');
+    return t==='ON' || t==='เปิด' || pressed==='true';
+  }
+  function isHeatmapOn(){
+    var btn=q('btnToggleHeatmap');
+    if(btn) return textIsOn(btn);
+    return false;
+  }
+  function isFFT2048(){
+    var sel=q('fftSizePreset');
+    return sel ? (parseInt(sel.value,10)===2048) : true;
+  }
+  function isOct1of6(){
+    var sel=q('octRes');
+    if(!sel) return true;
+    var v=(sel.value||'')+'';
+    if(v==='6') return true;
+    var opt=sel.options[sel.selectedIndex];
+    var t=opt ? (opt.textContent||'') : '';
+    return /1\s*\/\s*6/i.test(t);
+  }
+  function ecoOK(){ return !isHeatmapOn() && isFFT2048() && isOct1of6(); }
+
+  function paintFab(){
+    var saver=q('fabSaver');
+    if(saver){
+      saver.setAttribute('aria-pressed', window.__ECO_MODE__ ? 'true' : 'false');
+      saver.title = 'Battery Saver: ' + (window.__ECO_MODE__ ? 'ON' : 'OFF');
+    }
+  }
+
+  function ensureHeatmapOff(){
+    try{
+      var btn=q('btnToggleHeatmap');
+      if(btn && (textIsOn(btn))){
+        btn.click();
+        setTimeout(function(){
+          var b=q('btnToggleHeatmap');
+          if(b && (textIsOn(b))){ try{ b.click(); }catch(e){} }
+        }, 30);
+      }
+    }catch(e){}
+  }
+
+  function enforceEco(){
+    ensureHeatmapOff();
+    try{
+      var fs=q('fftSizePreset'); var sl=q('fftRangeSlider');
+      if(fs && fs.value!=='2048'){ fs.value='2048'; fs.dispatchEvent(new Event('change', {bubbles:true})); }
+      if(sl){ sl.value='0'; sl.dispatchEvent(new Event('input', {bubbles:true})); }
+    }catch(e){}
+    try{
+      var os=q('octRes');
+      if(os){
+        var needOk = (os.value==='6');
+        if(!needOk){
+          var opts=os.querySelectorAll('option');
+          for(var i=0;i<opts.length;i++){
+            var t=(opts[i].textContent||opts[i].value||'')+'';
+            if(/1\s*\/\s*6/i.test(t)){ os.value=opts[i].value; needOk=true; break; }
+          }
+          if(needOk){ os.dispatchEvent(new Event('change',{bubbles:true})); }
+        }
+      }
+    }catch(e){}
+  }
+
+  function setEco(on){
+    window.__ECO_MODE__ = !!on;
+    paintFab();
+    if(window.__ECO_MODE__){ enforceEco(); }
+  }
+
+  function hookAutoOff(){
+    function check(){ if(window.__ECO_MODE__ && !ecoOK()){ setEco(false); } }
+    var fs=q('fftSizePreset'); if(fs){ fs.addEventListener('change', check); }
+    var sl=q('fftRangeSlider'); if(sl){ sl.addEventListener('input', function(){ setTimeout(check,0); }); }
+    var os=q('octRes'); if(os){ os.addEventListener('change', check); }
+    var hmb=q('btnToggleHeatmap'); if(hmb){ hmb.addEventListener('click', function(){ setTimeout(check,0); }, true); }
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    var saver=q('fabSaver');
+    if(saver){
+      saver.addEventListener('click', function(ev){
+        ev.preventDefault(); ev.stopPropagation();
+        setEco(!window.__ECO_MODE__);
+        if(window.__ECO_MODE__){ enforceEco(); }
+      });
+    }
+    setEco(true);
+    enforceEco();
+    hookAutoOff();
+  });
+})();
+</script>
+
 </body>
 </html>

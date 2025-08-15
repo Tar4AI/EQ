@@ -351,18 +351,6 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
 </style>
 </head>
 <body>
-
-<!-- ECO FAB -->
-<div id="ecoFab" style="position:fixed;right:14px;bottom:14px;z-index:99999;
- display:flex;align-items:center;gap:8px;user-select:none;">
-  <button id="ecoBtn" title="Battery Saver" aria-label="Battery Saver"
-    style="border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);
-    color:#e5e7eb;border-radius:999px;padding:10px 14px;font-weight:700;
-    backdrop-filter:blur(8px);box-shadow:0 6px 16px rgba(0,0,0,.25);cursor:pointer;">
-    ⚡ Battery Saver: <span id="ecoState">OFF</span>
-  </button>
-</div>
-
   <div class="wrap">
     <!-- Error -->
     <div id="errBox" class="card" style="display:none;border-color:#e53e3e;background:#1c2430">
@@ -376,7 +364,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
 
     <div class="card">
       <div class="row" style="justify-content:space-between;align-items:center;">
-        <h2 style="margin:0 0 4px 0">my RTAs (v        2.2.0)</h2>
+        <h2 style="margin:0 0 4px 0">my RTAs (v 1.9.8)</h2>
         <div class="row">
           <button id="btnStart">▶️ เริ่มวัด</button>
           <button id="btnStop" class="secondary" disabled>⏸️ หยุด</button>
@@ -430,10 +418,9 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
           <div class="toolbar">
             <div class="stack">
               <label>FFT Size
-                <input id="fftRangeSlider" type="range" min="0" max="4" step="1" value="1" aria-label="FFT size preset">
+                <input id="fftRangeSlider" type="range" min="0" max="3" step="1" value="1" aria-label="FFT size preset">
                 <select id="fftSizePreset">
-                  <option value="1024">1024</option>
-<option value="2048">2048</option>
+                  <option value="2048">2048</option>
                   <option value="4096" selected>4096</option>
                   <option value="8192">8192</option>
                   <option value="16384">16384</option>
@@ -610,98 +597,6 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
   </div>
 
   
-
-
-<script>
-(function(){
-  function applyEcoPreferences(){
-    try{
-      if(!window.__ECO_MODE__) return;
-      // FFT = 1024
-      var selF = document.getElementById('fftSizePreset');
-      if(selF && selF.value !== '1024'){
-        selF.value = '1024'; selF.dispatchEvent(new Event('change',{bubbles:true}));
-      }
-      // Oct = 1/12
-      var selO = document.getElementById('octRes');
-      if(selO){
-        if(selO.value && selO.value !== '1/12'){
-          selO.value = '1/12'; selO.dispatchEvent(new Event('change',{bubbles:true}));
-        } else if(!selO.value){
-          // try matching by option text
-          var opts = selO.querySelectorAll('option');
-          for(var i=0;i<opts.length;i++){ if(/1\s*\/\s*12/.test(opts[i].textContent)){ selO.value = opts[i].value; selO.dispatchEvent(new Event('change',{bubbles:true})); break; } }
-        }
-      }
-      // Heatmap OFF
-      var hm = document.getElementById('btnToggleHeatmap');
-      if(hm){
-        if(hm.type === 'checkbox' && hm.checked){ hm.checked = false; hm.dispatchEvent(new Event('change',{bubbles:true})); }
-        else { try{ hm.click(); }catch(e){} }
-      }
-    }catch(e){}
-  }
-  document.addEventListener('DOMContentLoaded', function(){ applyEcoPreferences(); });
-  // Also apply when toggling Battery Saver
-  document.addEventListener('click', function(ev){
-    if(ev.target && ev.target.id === 'ecoBtn'){
-      setTimeout(applyEcoPreferences, 30);
-    }
-  }, true);
-})();
-</script>
-<script>
-(function(){
-  var ECO_KEY='rta_eco_mode';
-  function isIOS(){
-    var ua=navigator.userAgent||'';
-    return /iPad|iPhone|iPod/.test(ua) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
-  }
-  function isPhone(){
-    var ua=navigator.userAgent||'';
-    return (/iPhone/.test(ua) || (/Android/.test(ua) && /Mobile/.test(ua))) && !/iPad/.test(ua);
-  }
-  var eco=(localStorage.getItem(ECO_KEY) ?? (isPhone()?'1':'0'))==='1';
-  window.__ECO_MODE__=eco;
-
-  // DPR helper: clamp only on non‑iOS (iOS Safari rasterizerมีพฤติกรรมไม่คงที่เมื่อเปลี่ยน DPR runtime)
-  window.__ecoDPR__=function(){ return (window.devicePixelRatio||1); };
-
-  function paintFab(){
-    var st=document.getElementById('ecoState'); if(st){ st.textContent=window.__ECO_MODE__?'ON':'OFF'; }
-    var btn=document.getElementById('ecoBtn'); if(btn){
-      btn.style.background=window.__ECO_MODE__?'rgba(34,197,94,.25)':'rgba(0,0,0,.35)';
-      btn.style.borderColor=window.__ECO_MODE__?'rgba(34,197,94,.45)':'rgba(255,255,255,.2)';
-    }
-  }
-  function applyEcoFFTLowering(){
-    try{
-      if(!window.__ECO_MODE__) return;
-      var sel=document.getElementById('fftSizePreset');
-      if(sel){
-        var v=parseInt(sel.value,10);
-        if(v>4096){ sel.value='4096'; sel.dispatchEvent(new Event('change',{bubbles:true})); }
-      }
-    }catch(e){}
-  }
-
-  document.addEventListener('DOMContentLoaded', function(){
-    var btn=document.getElementById('ecoBtn');
-    if(btn){
-      btn.addEventListener('click', function(){
-        window.__ECO_MODE__=!window.__ECO_MODE__;
-        localStorage.setItem(ECO_KEY, window.__ECO_MODE__?'1':'0');
-        paintFab();
-        applyEcoFFTLowering();
-        try{ window.dispatchEvent(new Event('resize')); }catch(e){}
-      });
-    }
-    paintFab();
-    applyEcoFFTLowering();
-  });
-})();
-</script>
-
 <script>
 // Add 'standalone' class on <html> for iOS/standalone PWAs
 (function(){
@@ -722,7 +617,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
         this.HEATMAP_TIME_SLICES=200;
         this.HEATMAP_BINS_HD=300;
         this.HEATMAP_BINS_SD=60;
-        this.FFT_SIZES=[1024,2048,4096,8192,16384];
+        this.FFT_SIZES=[2048,4096,8192,16384];
 
         this.dom=this.getDOMElements();
         this.colors={};
@@ -910,13 +805,13 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
 
 
         this.dom.fftSizePreset.addEventListener('change',(e)=>{
-          const idx=[1024,2048,4096,8192,16384].indexOf(parseInt(e.target.value,10));
+          const idx=[2048,4096,8192,16384].indexOf(parseInt(e.target.value,10));
           this.dom.fftRangeSlider.value=idx<0?1:idx;
           this.onConfigChange();
         });
         this.dom.fftRangeSlider.addEventListener('input',(e)=>{
           const idx=parseInt(e.target.value,10);
-          const size=[1024,2048,4096,8192,16384][idx]||4096;
+          const size=[2048,4096,8192,16384][idx]||4096;
           this.dom.fftSizePreset.value=size;
           this.onConfigChange();
         });
@@ -1208,7 +1103,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
       }
 
       loop(){
-        try{const __t=performance.now();if(window.__ECO_MODE__&&this.__ecoLast!=null&&(__t-this.__ecoLast)<33){requestAnimationFrame(this.loop.bind(this));return;}this.__ecoLast=__t;}catch(e){}if(!this.state.running) return;
+        if(!this.state.running) return;
         this.state.analyser.getByteTimeDomainData(this.state.dataArray);
         this.state.analyser.getByteFrequencyData(this.state.freqArray);
         if(this.dom.avg.checked){
@@ -1283,8 +1178,8 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
       drawFFTBackground() {
         const ctx = this.canvases.fft.ctx;
         if (!ctx) return;
-        const w = ctx.canvas.width / (window.devicePixelRatio||1);
-        const h = ctx.canvas.height / (window.devicePixelRatio||1);
+        const w = ctx.canvas.width / (window.devicePixelRatio || 1);
+        const h = ctx.canvas.height / (window.devicePixelRatio || 1);
         const plotAreaH = h - this.PAD.T - this.PAD.B;
         ctx.clearRect(0, 0, w, h);
         ctx.strokeStyle = this.colors.gridH;
@@ -1645,127 +1540,5 @@ updateColors(){
     new RTAnalyzer();
   })();
   </script>
-
-
-
-<script>
-/* Eco Controller v6: Startup=ON, enforce 3 rules; auto-OFF if any rule broken */
-(function(){
-  function q(id){ return document.getElementById(id); }
-  var ECO_KEY='rta_eco_mode';
-
-  function textIsOn(el){
-    if(!el) return false;
-    var t=(el.textContent||'').trim().toUpperCase();
-    var pressed=el.getAttribute && el.getAttribute('aria-pressed');
-    return t==='ON' || t==='เปิด' || pressed==='true';
-  }
-
-  function isHeatmapOn(){
-    var btn=q('btnToggleHeatmap');
-    var cb=q('heatmapToggle');
-    if(cb && cb.type==='checkbox') return !!cb.checked;
-    if(btn) return textIsOn(btn);
-    return false; // assume off if control not found
-  }
-
-  function isFFT1024(){
-    var sel=q('fftSizePreset');
-    if(!sel) return true; // if not found, don't block
-    var v=parseInt(sel.value,10)||0;
-    return v===1024;
-  }
-
-  function isOct1of12(){
-    var sel=q('octRes') || q('octavePreset') || q('octSelect');
-    if(!sel) return true;
-    var v=(sel.value||'')+'';
-    if(/1\s*\/\s*12/i.test(v)) return true;
-    var opt=sel.options[sel.selectedIndex];
-    var t=opt ? (opt.textContent||'') : '';
-    return /1\s*\/\s*12/i.test(t);
-  }
-
-  function ecoOK(){
-    return !isHeatmapOn() && isFFT1024() && isOct1of12();
-  }
-
-  function paintFab(){
-    var st=q('ecoState'); if(st){ st.textContent=window.__ECO_MODE__?'ON':'OFF'; }
-    var btn=q('ecoBtn');
-    if(btn){
-      btn.style.background=window.__ECO_MODE__?'rgba(34,197,94,.25)':'rgba(0,0,0,.35)';
-      btn.style.borderColor=window.__ECO_MODE__?'rgba(34,197,94,.45)':'rgba(255,255,255,.2)';
-    }
-  }
-
-  function setEco(on){
-    window.__ECO_MODE__=!!on;
-    try{ localStorage.setItem(ECO_KEY, window.__ECO_MODE__?'1':'0'); }catch(e){}
-    paintFab();
-    if(window.__ECO_MODE__){ enforceEco(); }
-  }
-
-  function enforceEco(){
-    // Force Heatmap OFF
-    try{
-      var cb=q('heatmapToggle');
-      var btn=q('btnToggleHeatmap');
-      if(cb && cb.type==='checkbox' && cb.checked){
-        cb.checked=false; cb.dispatchEvent(new Event('change',{bubbles:true}));
-      }
-      if(btn && textIsOn(btn)){ btn.click(); }
-      setTimeout(function(){
-        var cb2=q('heatmapToggle'); var btn2=q('btnToggleHeatmap');
-        if(cb2 && cb2.type==='checkbox' && cb2.checked){ cb2.checked=false; cb2.dispatchEvent(new Event('change',{bubbles:true})); }
-        if(btn2 && textIsOn(btn2)){ try{ btn2.click(); }catch(e){} }
-      }, 30);
-    }catch(e){}
-    // FFT=1024
-    try{
-      var fs=q('fftSizePreset');
-      if(fs && fs.value!=='1024'){ fs.value='1024'; fs.dispatchEvent(new Event('change',{bubbles:true})); }
-    }catch(e){}
-    // Oct=1/12
-    try{
-      var os=q('octRes')||q('octavePreset')||q('octSelect');
-      if(os){
-        var ok=/1\s*\/\s*12/i.test(os.value||'');
-        if(!ok){
-          var opts=os.querySelectorAll('option');
-          for(var i=0;i<opts.length;i++){
-            var t=(opts[i].textContent||opts[i].value||'').trim();
-            if(/1\s*\/\s*12/i.test(t)){ os.value=opts[i].value; ok=true; break; }
-          }
-          if(ok) os.dispatchEvent(new Event('change',{bubbles:true}));
-        }
-      }
-    }catch(e){}
-  }
-
-  function hookAutoOff(){
-    // If any of the 3 rules is broken while ON -> turn OFF
-    function check(){ if(window.__ECO_MODE__ && !ecoOK()){ setEco(false); } }
-    var fs=q('fftSizePreset'); if(fs){ fs.addEventListener('change', check); }
-    var sl=q('fftRangeSlider'); if(sl){ sl.addEventListener('input', function(){ setTimeout(check,0); }); }
-    var os=q('octRes')||q('octavePreset')||q('octSelect'); if(os){ os.addEventListener('change', check); }
-    var hmcb=q('heatmapToggle'); if(hmcb){ hmcb.addEventListener('change', check); }
-    var hmb=q('btnToggleHeatmap'); if(hmb){ hmb.addEventListener('click', function(){ setTimeout(check,0); }, true); }
-  }
-
-  document.addEventListener('DOMContentLoaded', function(){
-    // Bind FAB: replace existing listeners to avoid duplicates
-    var eb=q('ecoBtn');
-    if(eb){
-      var clone=eb.cloneNode(true); eb.parentNode.replaceChild(clone, eb);
-      clone.addEventListener('click', function(ev){ ev.preventDefault(); ev.stopPropagation(); setEco(!window.__ECO_MODE__); });
-    }
-    hookAutoOff();
-    // Requirement: on app open, force Saver ON and enforce rules
-    setEco(true);
-  });
-})();
-</script>
-
 </body>
 </html>

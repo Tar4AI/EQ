@@ -364,7 +364,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
 
     <div class="card">
       <div class="row" style="justify-content:space-between;align-items:center;">
-        <h2 style="margin:0 0 4px 0">my RTAs (v  2.0)</h2>
+        <h2 style="margin:0 0 4px 0">my RTAs (v  2.1)</h2>
         <div class="row">
           <button id="btnStart">▶️ เริ่มวัด</button>
           <button id="btnStop" class="secondary" disabled>⏸️ หยุด</button>
@@ -597,6 +597,40 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
   </div>
 
   
+
+<script>
+(function(){
+  var ECO_KEY='rta_eco_mode';
+  function isPhoneUA(){
+    var ua=navigator.userAgent||'';
+    var isIPad=/iPad/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+    var isIPhone=/iPhone/.test(ua);
+    var isAndroidPhone=/Android/.test(ua)&&/Mobile/.test(ua);
+    return (isIPhone||isAndroidPhone)&&!isIPad;
+  }
+  function getEcoDefault(){ return isPhoneUA(); }
+  var eco=(localStorage.getItem(ECO_KEY) ?? (getEcoDefault()?'1':'0'))==='1';
+  window.__ECO_MODE__=eco;
+  var last=0, minDelta=1000/30;
+  window.__raf=function(cb){
+    if(!window.__ECO_MODE__) return __raf(cb);
+    return __raf(function(t){
+      if(t-last>=minDelta){ last=t; cb(t); }
+      else { __raf(window.__raf.bind(null, cb)); }
+    });
+  };
+  document.addEventListener('DOMContentLoaded', function(){
+    var box=document.getElementById('ecoToggle');
+    if(!box) return;
+    box.checked=!!window.__ECO_MODE__;
+    box.addEventListener('change', function(){
+      window.__ECO_MODE__=box.checked;
+      localStorage.setItem(ECO_KEY, box.checked?'1':'0');
+    });
+  }, {once:true});
+})();
+</script>
+
 <script>
 // Add 'standalone' class on <html> for iOS/standalone PWAs
 (function(){
@@ -1055,7 +1089,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
             osc1.frequency.value=180+40*Math.sin(t*0.9);
             osc2.frequency.value=900+150*Math.sin(t*0.7);
             osc3.frequency.value=4500+600*Math.sin(t*0.5);
-            if(this.state.running && this.state.demo.enabled) requestAnimationFrame(mod);
+            if(this.state.running && this.state.demo.enabled) __raf(mod);
           };
 
           this.state={...this.state,audioCtx,analyser,micSrc:null,stream:null,running:true,
@@ -1118,7 +1152,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
         if(this.state.heatmapEnabled && (now-this.state.lastHeatmapUpdate>=33)){
           this.drawHeatmap(); this.state.lastHeatmapUpdate=now;
         }
-        this.state.rafId=requestAnimationFrame(()=>this.loop());
+        this.state.rafId=__raf(()=>this.loop());
       }
 
       clamp01(v){return Math.min(1,Math.max(0,v));}
@@ -1178,8 +1212,8 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
       drawFFTBackground() {
         const ctx = this.canvases.fft.ctx;
         if (!ctx) return;
-        const w = ctx.canvas.width / (window.devicePixelRatio || 1);
-        const h = ctx.canvas.height / (window.devicePixelRatio || 1);
+        const w = ctx.canvas.width / (Math.min(1.5,(window.devicePixelRatio||1)));
+        const h = ctx.canvas.height / (Math.min(1.5,(window.devicePixelRatio||1)));
         const plotAreaH = h - this.PAD.T - this.PAD.B;
         ctx.clearRect(0, 0, w, h);
         ctx.strokeStyle = this.colors.gridH;
@@ -1189,8 +1223,8 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
         ticks.forEach(t => { const x = this.mapLogX(t, w); ctx.beginPath(); ctx.moveTo(x, this.PAD.T); ctx.lineTo(x, this.PAD.T + plotAreaH); ctx.stroke(); });
         ctx.strokeStyle = this.colors.frame; ctx.strokeRect(this.PAD.L, this.PAD.T, w - this.PAD.L - this.PAD.R, plotAreaH);
         ctx.fillStyle = this.colors.label; ctx.font = '12px system-ui';
-        ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-        [31.5, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000].forEach(t => { const x = this.mapLogX(t, w); ctx.fillText(t >= 1000 ? (t / 1000) + 'k' : t, x, h - this.LABEL_Y); });
+        ctx.textBaseline = 'alphabetic';
+        [31.5, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000].forEach(t => { const x = this.mapLogX(t, w); ctx.fillText(t >= 1000 ? (t / 1000) + 'k' : t, x - 8, h - this.LABEL_Y); });
         ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
         for (let i = 0; i <= 5; i++) {
@@ -1207,8 +1241,8 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
 
       drawLogGrid(ctx){
         if(!ctx) return;
-        const w=ctx.canvas.width/(window.devicePixelRatio||1);
-        const h=ctx.canvas.height/(window.devicePixelRatio||1);
+        const w=ctx.canvas.width/(Math.min(1.5,(window.devicePixelRatio||1)));
+        const h=ctx.canvas.height/(Math.min(1.5,(window.devicePixelRatio||1)));
         const plotAreaH=h-this.PAD.T-this.PAD.B;
         ctx.clearRect(0,0,w,h);
         ctx.strokeStyle=this.colors.gridH;
@@ -1217,8 +1251,8 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
         const ticks=[20,31.5,40,50,63,80,100,125,160,200,250,315,400,500,630,800,1000,2000,4000,8000,16000];
         ticks.forEach(t=>{const x=this.mapLogX(t,w); ctx.beginPath(); ctx.moveTo(x,this.PAD.T); ctx.lineTo(x,this.PAD.T+plotAreaH); ctx.stroke();});
         ctx.strokeStyle=this.colors.frame; ctx.strokeRect(this.PAD.L,this.PAD.T,w-this.PAD.L-this.PAD.R,plotAreaH);
-        ctx.fillStyle=this.colors.label; ctx.font='12px system-ui'; ctx.textAlign='center'; ctx.textBaseline='alphabetic';
-        [31.5,63,125,250,500,1000,2000,4000,8000,16000].forEach(t=>{const x=this.mapLogX(t,w); ctx.fillText(t>=1000?(t/1000)+'k':t,x,h-this.LABEL_Y);});
+        ctx.fillStyle=this.colors.label; ctx.font='12px system-ui'; ctx.textBaseline='alphabetic';
+        [31.5,63,125,250,500,1000,2000,4000,8000,16000].forEach(t=>{const x=this.mapLogX(t,w); ctx.fillText(t>=1000?(t/1000)+'k':t,x-8,h-this.LABEL_Y);});
       }
 
       drawPeakLine(ctx,x,wCss,hCss,color,dashed=false,labelText=null){
@@ -1249,7 +1283,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
 
       drawFFT(){
         const {ctx}=this.canvases.fft; if(!ctx) return;
-        const w=ctx.canvas.width/(window.devicePixelRatio||1), h=ctx.canvas.height/(window.devicePixelRatio||1);
+        const w=ctx.canvas.width/(Math.min(1.5,(window.devicePixelRatio||1))), h=ctx.canvas.height/(Math.min(1.5,(window.devicePixelRatio||1)));
         this.drawFFTBackground();
         if(!this.state.freqArray) return;
         const N=this.state.freqArray.length, fpb=this.state.sampleRate/(2*N);
@@ -1308,7 +1342,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
 
       drawOctave(){
         const {ctx}=this.canvases.oct; if(!ctx) return;
-        const w=ctx.canvas.width/(window.devicePixelRatio||1), h=ctx.canvas.height/(window.devicePixelRatio||1);
+        const w=ctx.canvas.width/(Math.min(1.5,(window.devicePixelRatio||1))), h=ctx.canvas.height/(Math.min(1.5,(window.devicePixelRatio||1)));
         this.drawLogGrid(ctx);
         if(!this.state.freqArray||!this.state.bands.length) return;
         const N=this.state.freqArray.length, fpb=this.state.sampleRate/(2*N);
@@ -1341,7 +1375,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
 
       drawHeatmap(force=false){
         const mainCtx=this.canvases.heatmap.ctx; if(!mainCtx) return;
-        const w=mainCtx.canvas.width/(window.devicePixelRatio||1), h=mainCtx.canvas.height/(window.devicePixelRatio||1);
+        const w=mainCtx.canvas.width/(Math.min(1.5,(window.devicePixelRatio||1))), h=mainCtx.canvas.height/(Math.min(1.5,(window.devicePixelRatio||1)));
         const plotAreaH=h-this.PAD.B;
         if(!this.state.freqArray||!this.state.heatmapFreqBinMap) return;
 
@@ -1374,11 +1408,11 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
       }
 
       drawHeatmapBackground(ctx){
-        const w=ctx.canvas.width/(window.devicePixelRatio||1), h=ctx.canvas.height/(window.devicePixelRatio||1);
+        const w=ctx.canvas.width/(Math.min(1.5,(window.devicePixelRatio||1))), h=ctx.canvas.height/(Math.min(1.5,(window.devicePixelRatio||1)));
         ctx.clearRect(0,0,w,h);
       }
       drawHeatmapGrid(ctx){
-        const w=ctx.canvas.width/(window.devicePixelRatio||1), h=ctx.canvas.height/(window.devicePixelRatio||1);
+        const w=ctx.canvas.width/(Math.min(1.5,(window.devicePixelRatio||1))), h=ctx.canvas.height/(Math.min(1.5,(window.devicePixelRatio||1)));
         const plotAreaH=h-this.PAD.B;
         ctx.strokeStyle=this.colors.frame; ctx.strokeRect(this.PAD.L,0,w-this.PAD.L-this.PAD.R,plotAreaH);
         ctx.strokeStyle=this.colors.gridV;
@@ -1389,7 +1423,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
       }
       drawHeatmapOverlay(){
         const ctx=this.canvases.heatmap.ctx; if(!ctx) return;
-        const w=ctx.canvas.width/(window.devicePixelRatio||1), h=ctx.canvas.height/(window.devicePixelRatio||1);
+        const w=ctx.canvas.width/(Math.min(1.5,(window.devicePixelRatio||1))), h=ctx.canvas.height/(Math.min(1.5,(window.devicePixelRatio||1)));
         this.drawHeatmapBackground(ctx);
         ctx.fillStyle='rgba(255,255,255,.4)'; ctx.font='24px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
         ctx.fillText('Heatmap OFF',w/2,(h-this.PAD.B)/2);
@@ -1423,7 +1457,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
       }
       drawDbMeterBackground(){const ctx=this.canvases.dbMeter.ctx; const w=ctx.canvas.width,h=ctx.canvas.height; ctx.clearRect(0,0,w,h);}
       updateDbMeter(db){
-        const ctx=this.canvases.dbMeter.ctx; const w=ctx.canvas.width/(window.devicePixelRatio||1), h=ctx.canvas.height/(window.devicePixelRatio||1);
+        const ctx=this.canvases.dbMeter.ctx; const w=ctx.canvas.width/(Math.min(1.5,(window.devicePixelRatio||1))), h=ctx.canvas.height/(Math.min(1.5,(window.devicePixelRatio||1)));
         const dbMin=0, dbMax=140; const fillW=w*this.clamp01((db-dbMin)/(dbMax-dbMin));
         const g=ctx.createLinearGradient(0,0,w,0);
         g.addColorStop(0,this.colors.dbMeter.green);
@@ -1540,5 +1574,22 @@ updateColors(){
     new RTAnalyzer();
   })();
   </script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  try{
+    if(!window.__ECO_MODE__) return;
+    var sel=document.getElementById('fftSizePreset');
+    if(sel){
+      var v=sel.value;
+      if(parseInt(v,10)>4096){
+        sel.value='4096';
+        sel.dispatchEvent(new Event('change',{bubbles:true}));
+      }
+    }
+  }catch(e){}
+});
+</script>
+
 </body>
 </html>

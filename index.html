@@ -364,7 +364,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
 
     <div class="card">
       <div class="row" style="justify-content:space-between;align-items:center;">
-        <h2 style="margin:0 0 4px 0">my RTAs (v 1.9.8)</h2>
+        <h2 style="margin:0 0 4px 0">my RTAs (v  2.0)</h2>
         <div class="row">
           <button id="btnStart">▶️ เริ่มวัด</button>
           <button id="btnStop" class="secondary" disabled>⏸️ หยุด</button>
@@ -1189,8 +1189,8 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
         ticks.forEach(t => { const x = this.mapLogX(t, w); ctx.beginPath(); ctx.moveTo(x, this.PAD.T); ctx.lineTo(x, this.PAD.T + plotAreaH); ctx.stroke(); });
         ctx.strokeStyle = this.colors.frame; ctx.strokeRect(this.PAD.L, this.PAD.T, w - this.PAD.L - this.PAD.R, plotAreaH);
         ctx.fillStyle = this.colors.label; ctx.font = '12px system-ui';
-        ctx.textBaseline = 'alphabetic';
-        [31.5, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000].forEach(t => { const x = this.mapLogX(t, w); ctx.fillText(t >= 1000 ? (t / 1000) + 'k' : t, x - 8, h - this.LABEL_Y); });
+        ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+        [31.5, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000].forEach(t => { const x = this.mapLogX(t, w); ctx.fillText(t >= 1000 ? (t / 1000) + 'k' : t, x, h - this.LABEL_Y); });
         ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
         for (let i = 0; i <= 5; i++) {
@@ -1217,8 +1217,8 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
         const ticks=[20,31.5,40,50,63,80,100,125,160,200,250,315,400,500,630,800,1000,2000,4000,8000,16000];
         ticks.forEach(t=>{const x=this.mapLogX(t,w); ctx.beginPath(); ctx.moveTo(x,this.PAD.T); ctx.lineTo(x,this.PAD.T+plotAreaH); ctx.stroke();});
         ctx.strokeStyle=this.colors.frame; ctx.strokeRect(this.PAD.L,this.PAD.T,w-this.PAD.L-this.PAD.R,plotAreaH);
-        ctx.fillStyle=this.colors.label; ctx.font='12px system-ui'; ctx.textBaseline='alphabetic';
-        [31.5,63,125,250,500,1000,2000,4000,8000,16000].forEach(t=>{const x=this.mapLogX(t,w); ctx.fillText(t>=1000?(t/1000)+'k':t,x-8,h-this.LABEL_Y);});
+        ctx.fillStyle=this.colors.label; ctx.font='12px system-ui'; ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+        [31.5,63,125,250,500,1000,2000,4000,8000,16000].forEach(t=>{const x=this.mapLogX(t,w); ctx.fillText(t>=1000?(t/1000)+'k':t,x,h-this.LABEL_Y);});
       }
 
       drawPeakLine(ctx,x,wCss,hCss,color,dashed=false,labelText=null){

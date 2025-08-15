@@ -376,7 +376,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
 
     <div class="card">
       <div class="row" style="justify-content:space-between;align-items:center;">
-        <h2 style="margin:0 0 4px 0">my RTAs (v  2.1.4)</h2>
+        <h2 style="margin:0 0 4px 0">my RTAs (v   2.1.5)</h2>
         <div class="row">
           <button id="btnStart">▶️ เริ่มวัด</button>
           <button id="btnStop" class="secondary" disabled>⏸️ หยุด</button>
@@ -625,11 +625,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
   window.__ECO_MODE__=eco;
 
   // DPR helper: clamp only on non‑iOS (iOS Safari rasterizerมีพฤติกรรมไม่คงที่เมื่อเปลี่ยน DPR runtime)
-  window.__ecoDPR__=function(){
-    var base=(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1));
-    if(!window.__ECO_MODE__) return base;
-    return isIOS() ? base : Math.min(1.5, base);
-  };
+  window.__ecoDPR__=function(){ return (window.devicePixelRatio||1); };
 
   function paintFab(){
     var st=document.getElementById('ecoState'); if(st){ st.textContent=window.__ECO_MODE__?'ON':'OFF'; }
@@ -1172,7 +1168,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
       }
 
       loop(){
-        if(!this.state.running) return;
+        try{const __t=performance.now();if(window.__ECO_MODE__&&this.__ecoLast!=null&&(__t-this.__ecoLast)<33){requestAnimationFrame(this.loop.bind(this));return;}this.__ecoLast=__t;}catch(e){}if(!this.state.running) return;
         this.state.analyser.getByteTimeDomainData(this.state.dataArray);
         this.state.analyser.getByteFrequencyData(this.state.freqArray);
         if(this.dom.avg.checked){
@@ -1247,8 +1243,8 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
       drawFFTBackground() {
         const ctx = this.canvases.fft.ctx;
         if (!ctx) return;
-        const w = ctx.canvas.width / (window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1));
-        const h = ctx.canvas.height / (window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1));
+        const w = ctx.canvas.width / (window.devicePixelRatio||1);
+        const h = ctx.canvas.height / (window.devicePixelRatio||1);
         const plotAreaH = h - this.PAD.T - this.PAD.B;
         ctx.clearRect(0, 0, w, h);
         ctx.strokeStyle = this.colors.gridH;
@@ -1276,8 +1272,8 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
 
       drawLogGrid(ctx){
         if(!ctx) return;
-        const w=ctx.canvas.width/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1));
-        const h=ctx.canvas.height/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1));
+        const w=ctx.canvas.width/(window.devicePixelRatio||1);
+        const h=ctx.canvas.height/(window.devicePixelRatio||1);
         const plotAreaH=h-this.PAD.T-this.PAD.B;
         ctx.clearRect(0,0,w,h);
         ctx.strokeStyle=this.colors.gridH;
@@ -1318,7 +1314,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
 
       drawFFT(){
         const {ctx}=this.canvases.fft; if(!ctx) return;
-        const w=ctx.canvas.width/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1)), h=ctx.canvas.height/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1));
+        const w=ctx.canvas.width/(window.devicePixelRatio||1), h=ctx.canvas.height/(window.devicePixelRatio||1);
         this.drawFFTBackground();
         if(!this.state.freqArray) return;
         const N=this.state.freqArray.length, fpb=this.state.sampleRate/(2*N);
@@ -1377,7 +1373,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
 
       drawOctave(){
         const {ctx}=this.canvases.oct; if(!ctx) return;
-        const w=ctx.canvas.width/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1)), h=ctx.canvas.height/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1));
+        const w=ctx.canvas.width/(window.devicePixelRatio||1), h=ctx.canvas.height/(window.devicePixelRatio||1);
         this.drawLogGrid(ctx);
         if(!this.state.freqArray||!this.state.bands.length) return;
         const N=this.state.freqArray.length, fpb=this.state.sampleRate/(2*N);
@@ -1410,7 +1406,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
 
       drawHeatmap(force=false){
         const mainCtx=this.canvases.heatmap.ctx; if(!mainCtx) return;
-        const w=mainCtx.canvas.width/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1)), h=mainCtx.canvas.height/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1));
+        const w=mainCtx.canvas.width/(window.devicePixelRatio||1), h=mainCtx.canvas.height/(window.devicePixelRatio||1);
         const plotAreaH=h-this.PAD.B;
         if(!this.state.freqArray||!this.state.heatmapFreqBinMap) return;
 
@@ -1443,11 +1439,11 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
       }
 
       drawHeatmapBackground(ctx){
-        const w=ctx.canvas.width/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1)), h=ctx.canvas.height/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1));
+        const w=ctx.canvas.width/(window.devicePixelRatio||1), h=ctx.canvas.height/(window.devicePixelRatio||1);
         ctx.clearRect(0,0,w,h);
       }
       drawHeatmapGrid(ctx){
-        const w=ctx.canvas.width/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1)), h=ctx.canvas.height/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1));
+        const w=ctx.canvas.width/(window.devicePixelRatio||1), h=ctx.canvas.height/(window.devicePixelRatio||1);
         const plotAreaH=h-this.PAD.B;
         ctx.strokeStyle=this.colors.frame; ctx.strokeRect(this.PAD.L,0,w-this.PAD.L-this.PAD.R,plotAreaH);
         ctx.strokeStyle=this.colors.gridV;
@@ -1458,7 +1454,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
       }
       drawHeatmapOverlay(){
         const ctx=this.canvases.heatmap.ctx; if(!ctx) return;
-        const w=ctx.canvas.width/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1)), h=ctx.canvas.height/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1));
+        const w=ctx.canvas.width/(window.devicePixelRatio||1), h=ctx.canvas.height/(window.devicePixelRatio||1);
         this.drawHeatmapBackground(ctx);
         ctx.fillStyle='rgba(255,255,255,.4)'; ctx.font='24px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
         ctx.fillText('Heatmap OFF',w/2,(h-this.PAD.B)/2);
@@ -1492,7 +1488,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
       }
       drawDbMeterBackground(){const ctx=this.canvases.dbMeter.ctx; const w=ctx.canvas.width,h=ctx.canvas.height; ctx.clearRect(0,0,w,h);}
       updateDbMeter(db){
-        const ctx=this.canvases.dbMeter.ctx; const w=ctx.canvas.width/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1)), h=ctx.canvas.height/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1));
+        const ctx=this.canvases.dbMeter.ctx; const w=ctx.canvas.width/(window.devicePixelRatio||1), h=ctx.canvas.height/(window.devicePixelRatio||1);
         const dbMin=0, dbMax=140; const fillW=w*this.clamp01((db-dbMin)/(dbMax-dbMin));
         const g=ctx.createLinearGradient(0,0,w,0);
         g.addColorStop(0,this.colors.dbMeter.green);

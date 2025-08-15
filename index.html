@@ -376,7 +376,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
 
     <div class="card">
       <div class="row" style="justify-content:space-between;align-items:center;">
-        <h2 style="margin:0 0 4px 0">my RTAs (v       2.1.9)</h2>
+        <h2 style="margin:0 0 4px 0">my RTAs (v        2.2.0)</h2>
         <div class="row">
           <button id="btnStart">▶️ เริ่มวัด</button>
           <button id="btnStop" class="secondary" disabled>⏸️ หยุด</button>
@@ -1647,126 +1647,122 @@ updateColors(){
   </script>
 
 
+
 <script>
-/* Eco Controller v5: enforce when ON, auto-OFF on heavier change (robust Heatmap handling) */
+/* Eco Controller v6: Startup=ON, enforce 3 rules; auto-OFF if any rule broken */
 (function(){
-  var ECO_KEY = 'rta_eco_mode';
-  function setEco(on){
-    window.__ECO_MODE__ = !!on;
-    try { localStorage.setItem(ECO_KEY, window.__ECO_MODE__ ? '1':'0'); } catch(e){}
-    paintFab();
-    if(window.__ECO_MODE__){ enforceEco(); }
-    try{ window.dispatchEvent(new Event('resize')); }catch(e){}
-  }
+  function q(id){ return document.getElementById(id); }
+  var ECO_KEY='rta_eco_mode';
+
   function textIsOn(el){
     if(!el) return false;
-    var t = (el.textContent||'').trim().toUpperCase();
-    return t === 'ON' || t === 'เปิด' || el.getAttribute('aria-pressed')==='true';
+    var t=(el.textContent||'').trim().toUpperCase();
+    var pressed=el.getAttribute && el.getAttribute('aria-pressed');
+    return t==='ON' || t==='เปิด' || pressed==='true';
   }
-  function ensureHeatmapOff(){
-    var hmBtn = document.getElementById('btnToggleHeatmap');
-    var hmCb = document.getElementById('heatmapToggle');
-    try{
-      if(hmCb && hmCb.type==='checkbox' && hmCb.checked){
-        hmCb.checked = false;
-        hmCb.dispatchEvent(new Event('change',{bubbles:true}));
-      }
-      if(hmBtn && textIsOn(hmBtn)){
-        hmBtn.click(); // toggle to OFF
-      }
-      // Retry once in case UI updates async
-      setTimeout(function(){
-        var hmBtn2 = document.getElementById('btnToggleHeatmap');
-        var hmCb2 = document.getElementById('heatmapToggle');
-        if(hmCb2 && hmCb2.type==='checkbox' && hmCb2.checked){
-          hmCb2.checked = false; hmCb2.dispatchEvent(new Event('change',{bubbles:true}));
-        }
-        if(hmBtn2 && textIsOn(hmBtn2)){
-          try{ hmBtn2.click(); }catch(e){}
-        }
-      }, 40);
-    }catch(e){}
+
+  function isHeatmapOn(){
+    var btn=q('btnToggleHeatmap');
+    var cb=q('heatmapToggle');
+    if(cb && cb.type==='checkbox') return !!cb.checked;
+    if(btn) return textIsOn(btn);
+    return false; // assume off if control not found
   }
-  function enforceEco(){
-    // FFT 1024
-    try{
-      var fs = document.getElementById('fftSizePreset');
-      if(fs && fs.value !== '1024'){ fs.value='1024'; fs.dispatchEvent(new Event('change',{bubbles:true})); }
-    }catch(e){}
-    // Oct 1/12
-    try{
-      var selO = document.getElementById('octRes') || document.getElementById('octavePreset') || document.getElementById('octSelect');
-      if(selO){
-        var need = /1\s*\/\s*12/i;
-        var ok = need.test((selO.value||''));
-        if(!ok){
-          var opts = selO.querySelectorAll('option');
-          for(var i=0;i<opts.length;i++){
-            var t = (opts[i].textContent||opts[i].value||'').trim();
-            if(need.test(t)){ selO.value = opts[i].value; ok = true; break; }
-          }
-          if(ok) selO.dispatchEvent(new Event('change',{bubbles:true}));
-        }
-      }
-    }catch(e){}
-    // Heatmap OFF
-    ensureHeatmapOff();
+
+  function isFFT1024(){
+    var sel=q('fftSizePreset');
+    if(!sel) return true; // if not found, don't block
+    var v=parseInt(sel.value,10)||0;
+    return v===1024;
   }
+
+  function isOct1of12(){
+    var sel=q('octRes') || q('octavePreset') || q('octSelect');
+    if(!sel) return true;
+    var v=(sel.value||'')+'';
+    if(/1\s*\/\s*12/i.test(v)) return true;
+    var opt=sel.options[sel.selectedIndex];
+    var t=opt ? (opt.textContent||'') : '';
+    return /1\s*\/\s*12/i.test(t);
+  }
+
+  function ecoOK(){
+    return !isHeatmapOn() && isFFT1024() && isOct1of12();
+  }
+
   function paintFab(){
-    var st=document.getElementById('ecoState'); if(st){ st.textContent=window.__ECO_MODE__?'ON':'OFF'; }
-    var btn=document.getElementById('ecoBtn');
+    var st=q('ecoState'); if(st){ st.textContent=window.__ECO_MODE__?'ON':'OFF'; }
+    var btn=q('ecoBtn');
     if(btn){
       btn.style.background=window.__ECO_MODE__?'rgba(34,197,94,.25)':'rgba(0,0,0,.35)';
       btn.style.borderColor=window.__ECO_MODE__?'rgba(34,197,94,.45)':'rgba(255,255,255,.2)';
     }
   }
+
+  function setEco(on){
+    window.__ECO_MODE__=!!on;
+    try{ localStorage.setItem(ECO_KEY, window.__ECO_MODE__?'1':'0'); }catch(e){}
+    paintFab();
+    if(window.__ECO_MODE__){ enforceEco(); }
+  }
+
+  function enforceEco(){
+    // Force Heatmap OFF
+    try{
+      var cb=q('heatmapToggle');
+      var btn=q('btnToggleHeatmap');
+      if(cb && cb.type==='checkbox' && cb.checked){
+        cb.checked=false; cb.dispatchEvent(new Event('change',{bubbles:true}));
+      }
+      if(btn && textIsOn(btn)){ btn.click(); }
+      setTimeout(function(){
+        var cb2=q('heatmapToggle'); var btn2=q('btnToggleHeatmap');
+        if(cb2 && cb2.type==='checkbox' && cb2.checked){ cb2.checked=false; cb2.dispatchEvent(new Event('change',{bubbles:true})); }
+        if(btn2 && textIsOn(btn2)){ try{ btn2.click(); }catch(e){} }
+      }, 30);
+    }catch(e){}
+    // FFT=1024
+    try{
+      var fs=q('fftSizePreset');
+      if(fs && fs.value!=='1024'){ fs.value='1024'; fs.dispatchEvent(new Event('change',{bubbles:true})); }
+    }catch(e){}
+    // Oct=1/12
+    try{
+      var os=q('octRes')||q('octavePreset')||q('octSelect');
+      if(os){
+        var ok=/1\s*\/\s*12/i.test(os.value||'');
+        if(!ok){
+          var opts=os.querySelectorAll('option');
+          for(var i=0;i<opts.length;i++){
+            var t=(opts[i].textContent||opts[i].value||'').trim();
+            if(/1\s*\/\s*12/i.test(t)){ os.value=opts[i].value; ok=true; break; }
+          }
+          if(ok) os.dispatchEvent(new Event('change',{bubbles:true}));
+        }
+      }
+    }catch(e){}
+  }
+
+  function hookAutoOff(){
+    // If any of the 3 rules is broken while ON -> turn OFF
+    function check(){ if(window.__ECO_MODE__ && !ecoOK()){ setEco(false); } }
+    var fs=q('fftSizePreset'); if(fs){ fs.addEventListener('change', check); }
+    var sl=q('fftRangeSlider'); if(sl){ sl.addEventListener('input', function(){ setTimeout(check,0); }); }
+    var os=q('octRes')||q('octavePreset')||q('octSelect'); if(os){ os.addEventListener('change', check); }
+    var hmcb=q('heatmapToggle'); if(hmcb){ hmcb.addEventListener('change', check); }
+    var hmb=q('btnToggleHeatmap'); if(hmb){ hmb.addEventListener('click', function(){ setTimeout(check,0); }, true); }
+  }
+
   document.addEventListener('DOMContentLoaded', function(){
-    // Bind FAB
-    var eb=document.getElementById('ecoBtn');
+    // Bind FAB: replace existing listeners to avoid duplicates
+    var eb=q('ecoBtn');
     if(eb){
       var clone=eb.cloneNode(true); eb.parentNode.replaceChild(clone, eb);
       clone.addEventListener('click', function(ev){ ev.preventDefault(); ev.stopPropagation(); setEco(!window.__ECO_MODE__); });
     }
-    // Auto-OFF detection
-    var fftSel=document.getElementById('fftSizePreset');
-    if(fftSel){
-      fftSel.addEventListener('change', function(){
-        var v=parseInt(fftSel.value,10)||0;
-        if(window.__ECO_MODE__ && v>1024){ setEco(false); }
-      });
-    }
-    var fftSlider=document.getElementById('fftRangeSlider');
-    if(fftSlider){
-      fftSlider.addEventListener('input', function(){
-        setTimeout(function(){
-          var sel=document.getElementById('fftSizePreset');
-          var v = sel ? parseInt(sel.value,10)||0 : 0;
-          if(window.__ECO_MODE__ && v>1024){ setEco(false); }
-        }, 0);
-      });
-    }
-    var octSel=document.getElementById('octRes')||document.getElementById('octavePreset')||document.getElementById('octSelect');
-    if(octSel){
-      octSel.addEventListener('change', function(){
-        var val=(octSel.value||''); var ok=/1\s*\/\s*12/i.test(val);
-        if(!ok){
-          var opt=octSel.options[octSel.selectedIndex]; var t=opt ? (opt.textContent||'') : '';
-          ok=/1\s*\/\s*12/i.test(t);
-        }
-        if(window.__ECO_MODE__ && !ok){ setEco(false); }
-      });
-    }
-    var hmCb=document.getElementById('heatmapToggle');
-    if(hmCb && hmCb.type==='checkbox'){
-      hmCb.addEventListener('change', function(){ if(window.__ECO_MODE__ && hmCb.checked){ setEco(false); } });
-    }
-    var hmBtn=document.getElementById('btnToggleHeatmap');
-    if(hmBtn){
-      hmBtn.addEventListener('click', function(){ if(window.__ECO_MODE__){ setTimeout(function(){ setEco(false); }, 0); } }, true);
-    }
-    // First paint + enforce if ON
-    paintFab();
-    if(window.__ECO_MODE__) enforceEco();
+    hookAutoOff();
+    // Requirement: on app open, force Saver ON and enforce rules
+    setEco(true);
   });
 })();
 </script>

@@ -351,6 +351,18 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
 </style>
 </head>
 <body>
+
+<!-- ECO FAB -->
+<div id="ecoFab" style="position:fixed;right:14px;bottom:14px;z-index:99999;
+  display:flex;align-items:center;gap:8px; user-select:none;">
+  <button id="ecoBtn" title="Battery Saver" aria-label="Battery Saver"
+    style="border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);
+    color:#e5e7eb;border-radius:999px;padding:10px 14px;font-weight:700;
+    backdrop-filter:blur(8px);box-shadow:0 6px 16px rgba(0,0,0,.25);cursor:pointer;">
+    ⚡ Battery Saver: <span id="ecoState">OFF</span>
+  </button>
+</div>
+
   <div class="wrap">
     <!-- Error -->
     <div id="errBox" class="card" style="display:none;border-color:#e53e3e;background:#1c2430">
@@ -364,7 +376,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
 
     <div class="card">
       <div class="row" style="justify-content:space-between;align-items:center;">
-        <h2 style="margin:0 0 4px 0">my RTAs (v  2.1)</h2>
+        <h2 style="margin:0 0 4px 0">my RTAs (v  2.1.1)</h2>
         <div class="row">
           <button id="btnStart">▶️ เริ่มวัด</button>
           <button id="btnStop" class="secondary" disabled>⏸️ หยุด</button>
@@ -601,33 +613,66 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
 <script>
 (function(){
   var ECO_KEY='rta_eco_mode';
-  function isPhoneUA(){
+  function isPhone(){
     var ua=navigator.userAgent||'';
     var isIPad=/iPad/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
     var isIPhone=/iPhone/.test(ua);
     var isAndroidPhone=/Android/.test(ua)&&/Mobile/.test(ua);
     return (isIPhone||isAndroidPhone)&&!isIPad;
   }
-  function getEcoDefault(){ return isPhoneUA(); }
-  var eco=(localStorage.getItem(ECO_KEY) ?? (getEcoDefault()?'1':'0'))==='1';
+  var eco=(localStorage.getItem(ECO_KEY) ?? (isPhone()?'1':'0'))==='1';
   window.__ECO_MODE__=eco;
+
+  if(!window.__origRAF__){ window.__origRAF__=window.requestAnimationFrame.bind(window); }
   var last=0, minDelta=1000/30;
-  window.__raf=function(cb){
-    if(!window.__ECO_MODE__) return __raf(cb);
-    return __raf(function(t){
+  function ecoRAF(cb){
+    return window.__origRAF__(function(t){
+      if(!window.__ECO_MODE__){ cb(t); return; }
       if(t-last>=minDelta){ last=t; cb(t); }
-      else { __raf(window.__raf.bind(null, cb)); }
+      else { window.__origRAF__(function(){ ecoRAF(cb); }); }
     });
+  }
+  window.requestAnimationFrame=function(cb){ return ecoRAF(cb); };
+
+  window.__ecoDPR__=function(){
+    var base=(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1));
+    return window.__ECO_MODE__ ? Math.min(1.5, base) : base;
   };
+
+  function applyEcoFFTLowering(){
+    try{
+      if(!window.__ECO_MODE__) return;
+      var sel=document.getElementById('fftSizePreset');
+      if(sel){
+        var v=parseInt(sel.value,10);
+        if(v>4096){ sel.value='4096'; sel.dispatchEvent(new Event('change',{bubbles:true})); }
+      }
+    }catch(e){}
+  }
+
+  function paintFab(){
+    var st=document.getElementById('ecoState'); if(st){ st.textContent=window.__ECO_MODE__?'ON':'OFF'; }
+    var btn=document.getElementById('ecoBtn');
+    if(btn){
+      btn.style.background=window.__ECO_MODE__?'rgba(34,197,94,.25)':'rgba(0,0,0,.35)';
+      btn.style.borderColor=window.__ECO_MODE__?'rgba(34,197,94,.45)':'rgba(255,255,255,.2)';
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', function(){
-    var box=document.getElementById('ecoToggle');
-    if(!box) return;
-    box.checked=!!window.__ECO_MODE__;
-    box.addEventListener('change', function(){
-      window.__ECO_MODE__=box.checked;
-      localStorage.setItem(ECO_KEY, box.checked?'1':'0');
-    });
-  }, {once:true});
+    var btn=document.getElementById('ecoBtn');
+    if(btn){
+      btn.addEventListener('click', function(){
+        window.__ECO_MODE__=!window.__ECO_MODE__;
+        localStorage.setItem(ECO_KEY, window.__ECO_MODE__?'1':'0');
+        paintFab();
+        applyEcoFFTLowering();
+        try{ window.dispatchEvent(new Event('resize')); }catch(e){}
+      });
+    }
+    paintFab();
+    applyEcoFFTLowering();
+  });
 })();
 </script>
 
@@ -1089,7 +1134,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
             osc1.frequency.value=180+40*Math.sin(t*0.9);
             osc2.frequency.value=900+150*Math.sin(t*0.7);
             osc3.frequency.value=4500+600*Math.sin(t*0.5);
-            if(this.state.running && this.state.demo.enabled) __raf(mod);
+            if(this.state.running && this.state.demo.enabled) requestAnimationFrame(mod);
           };
 
           this.state={...this.state,audioCtx,analyser,micSrc:null,stream:null,running:true,
@@ -1152,7 +1197,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
         if(this.state.heatmapEnabled && (now-this.state.lastHeatmapUpdate>=33)){
           this.drawHeatmap(); this.state.lastHeatmapUpdate=now;
         }
-        this.state.rafId=__raf(()=>this.loop());
+        this.state.rafId=requestAnimationFrame(()=>this.loop());
       }
 
       clamp01(v){return Math.min(1,Math.max(0,v));}
@@ -1212,8 +1257,8 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
       drawFFTBackground() {
         const ctx = this.canvases.fft.ctx;
         if (!ctx) return;
-        const w = ctx.canvas.width / (Math.min(1.5,(window.devicePixelRatio||1)));
-        const h = ctx.canvas.height / (Math.min(1.5,(window.devicePixelRatio||1)));
+        const w = ctx.canvas.width / (window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1));
+        const h = ctx.canvas.height / (window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1));
         const plotAreaH = h - this.PAD.T - this.PAD.B;
         ctx.clearRect(0, 0, w, h);
         ctx.strokeStyle = this.colors.gridH;
@@ -1241,8 +1286,8 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
 
       drawLogGrid(ctx){
         if(!ctx) return;
-        const w=ctx.canvas.width/(Math.min(1.5,(window.devicePixelRatio||1)));
-        const h=ctx.canvas.height/(Math.min(1.5,(window.devicePixelRatio||1)));
+        const w=ctx.canvas.width/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1));
+        const h=ctx.canvas.height/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1));
         const plotAreaH=h-this.PAD.T-this.PAD.B;
         ctx.clearRect(0,0,w,h);
         ctx.strokeStyle=this.colors.gridH;
@@ -1283,7 +1328,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
 
       drawFFT(){
         const {ctx}=this.canvases.fft; if(!ctx) return;
-        const w=ctx.canvas.width/(Math.min(1.5,(window.devicePixelRatio||1))), h=ctx.canvas.height/(Math.min(1.5,(window.devicePixelRatio||1)));
+        const w=ctx.canvas.width/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1)), h=ctx.canvas.height/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1));
         this.drawFFTBackground();
         if(!this.state.freqArray) return;
         const N=this.state.freqArray.length, fpb=this.state.sampleRate/(2*N);
@@ -1342,7 +1387,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
 
       drawOctave(){
         const {ctx}=this.canvases.oct; if(!ctx) return;
-        const w=ctx.canvas.width/(Math.min(1.5,(window.devicePixelRatio||1))), h=ctx.canvas.height/(Math.min(1.5,(window.devicePixelRatio||1)));
+        const w=ctx.canvas.width/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1)), h=ctx.canvas.height/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1));
         this.drawLogGrid(ctx);
         if(!this.state.freqArray||!this.state.bands.length) return;
         const N=this.state.freqArray.length, fpb=this.state.sampleRate/(2*N);
@@ -1375,7 +1420,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
 
       drawHeatmap(force=false){
         const mainCtx=this.canvases.heatmap.ctx; if(!mainCtx) return;
-        const w=mainCtx.canvas.width/(Math.min(1.5,(window.devicePixelRatio||1))), h=mainCtx.canvas.height/(Math.min(1.5,(window.devicePixelRatio||1)));
+        const w=mainCtx.canvas.width/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1)), h=mainCtx.canvas.height/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1));
         const plotAreaH=h-this.PAD.B;
         if(!this.state.freqArray||!this.state.heatmapFreqBinMap) return;
 
@@ -1408,11 +1453,11 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
       }
 
       drawHeatmapBackground(ctx){
-        const w=ctx.canvas.width/(Math.min(1.5,(window.devicePixelRatio||1))), h=ctx.canvas.height/(Math.min(1.5,(window.devicePixelRatio||1)));
+        const w=ctx.canvas.width/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1)), h=ctx.canvas.height/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1));
         ctx.clearRect(0,0,w,h);
       }
       drawHeatmapGrid(ctx){
-        const w=ctx.canvas.width/(Math.min(1.5,(window.devicePixelRatio||1))), h=ctx.canvas.height/(Math.min(1.5,(window.devicePixelRatio||1)));
+        const w=ctx.canvas.width/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1)), h=ctx.canvas.height/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1));
         const plotAreaH=h-this.PAD.B;
         ctx.strokeStyle=this.colors.frame; ctx.strokeRect(this.PAD.L,0,w-this.PAD.L-this.PAD.R,plotAreaH);
         ctx.strokeStyle=this.colors.gridV;
@@ -1423,7 +1468,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
       }
       drawHeatmapOverlay(){
         const ctx=this.canvases.heatmap.ctx; if(!ctx) return;
-        const w=ctx.canvas.width/(Math.min(1.5,(window.devicePixelRatio||1))), h=ctx.canvas.height/(Math.min(1.5,(window.devicePixelRatio||1)));
+        const w=ctx.canvas.width/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1)), h=ctx.canvas.height/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1));
         this.drawHeatmapBackground(ctx);
         ctx.fillStyle='rgba(255,255,255,.4)'; ctx.font='24px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
         ctx.fillText('Heatmap OFF',w/2,(h-this.PAD.B)/2);
@@ -1457,7 +1502,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
       }
       drawDbMeterBackground(){const ctx=this.canvases.dbMeter.ctx; const w=ctx.canvas.width,h=ctx.canvas.height; ctx.clearRect(0,0,w,h);}
       updateDbMeter(db){
-        const ctx=this.canvases.dbMeter.ctx; const w=ctx.canvas.width/(Math.min(1.5,(window.devicePixelRatio||1))), h=ctx.canvas.height/(Math.min(1.5,(window.devicePixelRatio||1)));
+        const ctx=this.canvases.dbMeter.ctx; const w=ctx.canvas.width/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1)), h=ctx.canvas.height/(window.__ecoDPR__?window.__ecoDPR__():(window.devicePixelRatio||1));
         const dbMin=0, dbMax=140; const fillW=w*this.clamp01((db-dbMin)/(dbMax-dbMin));
         const g=ctx.createLinearGradient(0,0,w,0);
         g.addColorStop(0,this.colors.dbMeter.green);
@@ -1574,22 +1619,5 @@ updateColors(){
     new RTAnalyzer();
   })();
   </script>
-
-<script>
-document.addEventListener('DOMContentLoaded', function(){
-  try{
-    if(!window.__ECO_MODE__) return;
-    var sel=document.getElementById('fftSizePreset');
-    if(sel){
-      var v=sel.value;
-      if(parseInt(v,10)>4096){
-        sel.value='4096';
-        sel.dispatchEvent(new Event('change',{bubbles:true}));
-      }
-    }
-  }catch(e){}
-});
-</script>
-
 </body>
 </html>

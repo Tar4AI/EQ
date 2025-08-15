@@ -376,7 +376,7 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
 
     <div class="card">
       <div class="row" style="justify-content:space-between;align-items:center;">
-        <h2 style="margin:0 0 4px 0">my RTAs (v   2.1.5)</h2>
+        <h2 style="margin:0 0 4px 0">my RTAs (v    2.1.6)</h2>
         <div class="row">
           <button id="btnStart">▶️ เริ่มวัด</button>
           <button id="btnStop" class="secondary" disabled>⏸️ หยุด</button>
@@ -432,7 +432,8 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
               <label>FFT Size
                 <input id="fftRangeSlider" type="range" min="0" max="3" step="1" value="1" aria-label="FFT size preset">
                 <select id="fftSizePreset">
-                  <option value="2048">2048</option>
+                  <option value=\"1024\">1024</option>
+<option value="2048">2048</option>
                   <option value="4096" selected>4096</option>
                   <option value="8192">8192</option>
                   <option value="16384">16384</option>
@@ -610,6 +611,45 @@ html.standalone .container, html.standalone .wrapper, html.standalone .meters, h
 
   
 
+
+<script>
+(function(){
+  function applyEcoPreferences(){
+    try{
+      if(!window.__ECO_MODE__) return;
+      // FFT = 1024
+      var selF = document.getElementById('fftSizePreset');
+      if(selF && selF.value !== '1024'){
+        selF.value = '1024'; selF.dispatchEvent(new Event('change',{bubbles:true}));
+      }
+      // Oct = 1/12
+      var selO = document.getElementById('octavePreset');
+      if(selO){
+        if(selO.value && selO.value !== '1/12'){
+          selO.value = '1/12'; selO.dispatchEvent(new Event('change',{bubbles:true}));
+        } else if(!selO.value){
+          // try matching by option text
+          var opts = selO.querySelectorAll('option');
+          for(var i=0;i<opts.length;i++){ if(/1\s*\/\s*12/.test(opts[i].textContent)){ selO.value = opts[i].value; selO.dispatchEvent(new Event('change',{bubbles:true})); break; } }
+        }
+      }
+      // Heatmap OFF
+      var hm = document.getElementById('heatmapToggle');
+      if(hm){
+        if(hm.type === 'checkbox' && hm.checked){ hm.checked = false; hm.dispatchEvent(new Event('change',{bubbles:true})); }
+        else { try{ hm.click(); }catch(e){} }
+      }
+    }catch(e){}
+  }
+  document.addEventListener('DOMContentLoaded', function(){ applyEcoPreferences(); });
+  // Also apply when toggling Battery Saver
+  document.addEventListener('click', function(ev){
+    if(ev.target && ev.target.id === 'ecoBtn'){
+      setTimeout(applyEcoPreferences, 30);
+    }
+  }, true);
+})();
+</script>
 <script>
 (function(){
   var ECO_KEY='rta_eco_mode';
